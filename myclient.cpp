@@ -5,10 +5,9 @@
 #include <QDebug>
 
 MyClient::MyClient(qintptr socketDescriptor, QObject *parent) :
-    socketDescriptor(socketDescriptor),
-    QThread(parent)
+    QThread(parent),
+    socketDescriptor(socketDescriptor)
 {
-    qDebug()<<"创建新线程 "<<socketDescriptor;
 }
 
 qintptr MyClient::getSocketDescriptor()
@@ -28,8 +27,8 @@ void MyClient::sendData(const QByteArray &data)
 
 void MyClient::onReadyRead()
 {
-    quint32 size;
-    qint32 type;
+    int size;
+    int type;
     qintptr sender;
 
     packetData.append(socket->readAll());
@@ -67,6 +66,10 @@ void MyClient::onReadyRead()
             emit sendExceptOne(sender, packetData.left(size));
             break;
         }
+        default:
+            //如果不能识别，可能连接的不是客户端，直接断开连接
+            socket->disconnectFromHost();
+            return;
     }
 
     packetData = packetData.right(packetData.size() - size);
@@ -79,11 +82,11 @@ void MyClient::onDisconnected()
     //构造自己退出信息，发送给所有人
     QByteArray data;
     QDataStream stream(data);
-    stream<<(quint32)0;
-    stream<<(qint32)CLIENT_DISCONNECTED;
+    stream<<(int)0;
+    stream<<(int)CLIENT_DISCONNECTED;
     stream<<getSocketDescriptor();
     stream.device()->seek(0);
-    stream<<(quint32)data.size();
+    stream<<data.size();
     emit onClientDisconnected(getSocketDescriptor());
     emit sendExceptOne(getSocketDescriptor(), data);
 
@@ -92,6 +95,8 @@ void MyClient::onDisconnected()
 
 void MyClient::run()
 {
+    qDebug()<<"创建新线程 "<<socketDescriptor;
+
     socket = new QTcpSocket();
     socket->setSocketDescriptor(socketDescriptor);
 
