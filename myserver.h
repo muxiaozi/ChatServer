@@ -20,6 +20,7 @@ public slots:
     void onSendToOne(qintptr someone, const QByteArray &data);
     void onSendExceptOne(qintptr someone, const QByteArray &data);
     void onClientFinished();
+    void forceDisconnect(qintptr client);
 
 protected:
     void incomingConnection(qintptr handle) Q_DECL_OVERRIDE;

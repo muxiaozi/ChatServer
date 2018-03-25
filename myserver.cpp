@@ -34,6 +34,16 @@ void MyServer::onClientFinished()
     finishedClient->deleteLater();
 }
 
+void MyServer::forceDisconnect(qintptr client)
+{
+    for(auto c : clientList){
+        if(c->getSocketDescriptor() == client){
+            c->forceDisconnect();
+            break;
+        }
+    }
+}
+
 void MyServer::incomingConnection(qintptr handle)
 {
     MyClient *client = new MyClient(handle, this);

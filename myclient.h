@@ -26,6 +26,7 @@ public:
     qintptr getSocketDescriptor();
     QString getName();
     void sendData(const QByteArray &data);
+    void forceDisconnect();
 
 signals:
     void onClientConnected(qintptr user, const QString &name);
@@ -42,6 +43,7 @@ protected:
 
 private:
     QTcpSocket *socket;
+
     //服务端识别码，用于创建客户端
     qintptr socketDescriptor;
 

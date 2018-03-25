@@ -48,7 +48,8 @@ void ChatServer::on_table_clicked(const QModelIndex &index)
     if(index.column() == 0){
         if(QMessageBox::warning(this, tr("警告"), tr("确定要强制下线该用户？"),
                                 QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes){
-
+            server->forceDisconnect(ui->table->item(index.row(), 1)
+                                    ->data(Qt::UserRole).value<qintptr>());
         }
     }
 }
@@ -64,7 +65,7 @@ void ChatServer::onClientConnected(qintptr user, const QString &name)
     ui->table->setItem(row, 0, offlineItem);
 
     QTableWidgetItem *nameItem = new QTableWidgetItem(name);
-    nameItem->setData(Qt::UserRole, user);
+    nameItem->setData(Qt::UserRole, QVariant::fromValue<qintptr>(user));
     nameItem->setFlags(Qt::ItemIsEnabled);
     ui->table->setItem(row, 1, nameItem);
 
@@ -76,7 +77,7 @@ void ChatServer::onClientConnected(qintptr user, const QString &name)
 void ChatServer::onClientDisconnected(qintptr user)
 {
     for(int i = 0; i < ui->table->rowCount(); ++i){
-        quint64 id = ui->table->item(i, 0)->data(Qt::UserRole).toInt();
+        qintptr id = ui->table->item(i, 1)->data(Qt::UserRole).value<qintptr>();
         if(user == id){
             ui->table->removeRow(i);
             break;

@@ -22,7 +22,14 @@ QString MyClient::getName()
 
 void MyClient::sendData(const QByteArray &data)
 {
-    socket->write(data);
+    if(socket->isWritable()){
+        socket->write(data);
+    }
+}
+
+void MyClient::forceDisconnect()
+{
+    socket->disconnectFromHost();
 }
 
 void MyClient::onReadyRead()
