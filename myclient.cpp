@@ -39,7 +39,7 @@ void MyClient::onReadyRead()
     qintptr sender;
 
     packetData.append(socket->readAll());
-    QDataStream stream(packetData);
+    QDataStream stream(&packetData, QIODevice::ReadOnly);
 
     stream>>size;
     if(packetData.size() < size)
@@ -50,11 +50,11 @@ void MyClient::onReadyRead()
     switch(type){
         case CLIENT_CONNECTED: //用户信息
         {
-            QString info;
+            QByteArray info;
             stream>>info;
             clientDescriptor = sender;
-            name = info;
-            emit onClientConnected(sender, info);
+            name = QString::fromUtf8(info);
+            emit onClientConnected(sender, name);
             emit sendExceptOne(sender, packetData.left(size));
             break;
         }
@@ -63,6 +63,9 @@ void MyClient::onReadyRead()
         {
             qintptr receiver;
             stream>>receiver;
+            QByteArray byteText;
+            stream>>byteText;
+            qDebug()<<QString::fromUtf8(byteText);
             emit sendToOne(receiver, packetData.left(size));
             break;
         }
@@ -88,7 +91,7 @@ void MyClient::onDisconnected()
 
     //构造自己退出信息，发送给所有人
     QByteArray data;
-    QDataStream stream(data);
+    QDataStream stream(&packetData, QIODevice::WriteOnly);
     stream<<(int)0;
     stream<<(int)CLIENT_DISCONNECTED;
     stream<<getSocketDescriptor();

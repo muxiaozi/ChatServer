@@ -12,12 +12,12 @@ class MyClient : public QThread
     Q_OBJECT
 public:
     enum DataType{
-        CLIENT_CONNECTED = 1,       // id, name     [quint64, utf8]
-        CLIENT_DISCONNECTED = 2,    // id           [quint64]
-        RECEIVE_TEXT_SINGAL = 3,    // id, text     [quint64, utf8]
-        RECEIVE_TEXT_ALL = 4,       // id, text     [quint64, utf8]
-        RECEIVE_VOICE_SINGAL = 5,   // id, voice    [quint64, quint32, blob]
-        RECEIVE_VOICE_ALL = 6,      // id, voice    [quint64, quint32, blob]
+        CLIENT_CONNECTED = 1,
+        CLIENT_DISCONNECTED = 2,
+        RECEIVE_TEXT_SINGAL = 3,
+        RECEIVE_TEXT_ALL = 4,
+        RECEIVE_VOICE_SINGAL = 5,
+        RECEIVE_VOICE_ALL = 6,
     };
 
 public:

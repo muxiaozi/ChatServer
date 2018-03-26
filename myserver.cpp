@@ -61,11 +61,11 @@ void MyServer::incomingConnection(qintptr handle)
 
     //有消息需要发送给某一个人
     connect(client, SIGNAL(sendToOne(qintptr,QByteArray)),
-            this, SLOT(onSendToOne(qintptr,QByteArray)));
+            this, SLOT(onSendToOne(qintptr,QByteArray)), Qt::QueuedConnection);
 
     //有消息需要发送给除了某一个人以外的所有人
     connect(client, SIGNAL(sendExceptOne(qintptr,QByteArray)),
-            this, SLOT(onSendExceptOne(qintptr,QByteArray)));
+            this, SLOT(onSendExceptOne(qintptr,QByteArray)), Qt::QueuedConnection);
 
     client->start();
 }
