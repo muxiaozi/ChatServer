@@ -16,11 +16,11 @@ public:
 signals:
     void onClientConnected(qintptr user, const QString &name);
     void onClientDisconnected(qintptr user);
+    void sendData(qintptr user, const QByteArray &data);
 
 public slots:
     void onSendToOne(qintptr someone, const QByteArray &data);
     void onSendExceptOne(qintptr someone, const QByteArray &data);
-    void clientConnected(qintptr user, const QString &name);
     void onClientFinished();
     void forceDisconnect(qintptr client);
 

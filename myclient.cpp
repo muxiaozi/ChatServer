@@ -1,4 +1,8 @@
-﻿#include "myclient.h"
+﻿#if _MSC_VER >= 1600
+#pragma execution_character_set("utf-8")
+#endif
+
+#include "myclient.h"
 #include <QTcpSocket>
 #include <QDataStream>
 #include <QByteArray>
@@ -14,19 +18,12 @@ MyClient::MyClient(qintptr socketDescriptor, QObject *parent) :
 
 qintptr MyClient::getSocketDescriptor() const
 {
-    return clientDescriptor;
+    return socketDescriptor;
 }
 
 QString MyClient::getName() const
 {
     return name;
-}
-
-void MyClient::sendData(const QByteArray &data)
-{
-    if(socket->isWritable()){
-        socket->write(data);
-    }
 }
 
 void MyClient::forceDisconnect()
@@ -42,86 +39,98 @@ void MyClient::sendOnlineUserToMe()
     QByteArray data;
     QDataStream stream(&data, QIODevice::WriteOnly);
 
-    QList<MyClient*> clients = server->getClientList();
-    for(MyClient* client : clients){
-        stream.device()->seek(0);
-        data.clear();
-        stream<<(int)0;
-        stream<<CLIENT_CONNECTED;
-        stream<<client->getSocketDescriptor();
-        stream<<client->getName().toUtf8();
-        stream.device()->seek(0);
-        stream<<data->size();
+//    QList<MyClient*> clients = server->getClientList();
+//    for(MyClient* client : clients){
+//        stream.device()->seek(0);
+//        data.clear();
+//        stream<<(int)0;
+//        stream<<(int)CLIENT_CONNECTED;
+//        stream<<client->getSocketDescriptor();
+//        stream<<client->getName().toUtf8();
+//        stream.device()->seek(0);
+//        stream<<data.size();
+//        socket->write(data);
+    //    }
+}
+
+void MyClient::sendData(qintptr user, const QByteArray &data)
+{
+    qDebug()<<"sendData client "<<QThread::currentThread();
+
+    if(user == getSocketDescriptor()){
         socket->write(data);
     }
 }
 
 void MyClient::onReadyRead()
 {
-    int size;
-    int type;
-    qintptr sender;
+    qDebug()<<"readyRead "<<QThread::currentThread();
+
+    int size;           //大小
+    int type;           //类型
+    qintptr receiver;   //接收/发送方
+    QByteArray tmpData; //数据包内容
 
     packetData.append(socket->readAll());
-    QDataStream stream(&packetData, QIODevice::ReadOnly);
+    QDataStream stream(&packetData, QIODevice::ReadWrite);
 
-    stream>>size;
-    if(packetData.size() < size)
-        return;
-    stream>>type;
-    stream>>sender;
-
-    switch(type){
-    case CLIENT_CONNECTED: //用户信息
-    {
-        QByteArray info;
-        stream>>info;
-        clientDescriptor = sender;
-        name = QString::fromUtf8(info);
-
-        sendOnlineUserToMe();
-
-        emit onClientConnected(sender, name);
-        emit sendExceptOne(sender, packetData.left(size));
-        break;
-    }
-    case RECEIVE_TEXT_SINGAL:
-    case RECEIVE_VOICE_SINGAL:
-    {
-        qintptr receiver;
+    while(packetData.size() > sizeof(int)){
+        stream>>size;
+        if(packetData.size() < size) break;
+        stream>>type;
         stream>>receiver;
-        emit sendToOne(receiver, packetData.left(size));
-        break;
-    }
-    case CLIENT_DISCONNECTED:
-    case RECEIVE_TEXT_ALL:
-    case RECEIVE_VOICE_ALL:
-    {
-        emit sendExceptOne(sender, packetData.left(size));
-        break;
-    }
-    default:
-        //如果不能识别，可能连接的不是客户端，直接断开连接
-        socket->disconnectFromHost();
-        return;
-    }
 
-    packetData = packetData.right(packetData.size() - size);
+        //接收方id -> 发送方id
+        stream.device()->seek(stream.device()->pos() - sizeof(qintptr));
+        stream<<socketDescriptor;
 
-    //如果还有数据可读，继续读取
-    if(packetData.size() > sizeof(int))
-        onReadyRead();
+        qDebug()<<"receiver: "<<receiver<<", type: "<< type;
+
+        switch(type){
+        case CONNECTED: //用户信息
+        {
+            stream>>tmpData;
+            name = QString::fromUtf8(tmpData);
+
+            sendOnlineUserToMe();
+
+            emit onClientConnected(getSocketDescriptor(), getName());
+            emit sendExceptOne(getSocketDescriptor(), packetData.left(size));
+            break;
+        }
+        case TEXT_TO_ONE:
+        case VOICE_TO_ONE:
+        {
+            emit sendToOne(receiver, packetData.left(size));
+            break;
+        }
+        case TEXT_TO_ALL:
+        case VOICE_TO_ALL:
+        case DISCONNECTED:
+        {
+            emit sendExceptOne(getSocketDescriptor(), packetData.left(size));
+            break;
+        }
+        default:
+            //如果不能识别，可能连接的不是客户端，直接断开连接
+            socket->disconnectFromHost();
+            return;
+        }
+
+        //截取未读数据块
+        packetData = packetData.right(packetData.size() - size);
+    }
 }
 
 void MyClient::onDisconnected()
 {
-    qDebug()<<"线程结束 "<<socketDescriptor;
+    qDebug()<<"线程结束 "<<QThread::currentThread();
 
     //构造自己退出信息，发送给所有人
     QByteArray data;
     QDataStream stream(&packetData, QIODevice::WriteOnly);
     stream<<(int)0;
-    stream<<(int)CLIENT_DISCONNECTED;
+    stream<<(int)DISCONNECTED;
     stream<<getSocketDescriptor();
     stream.device()->seek(0);
     stream<<data.size();
@@ -133,13 +142,13 @@ void MyClient::onDisconnected()
 
 void MyClient::run()
 {
-    qDebug()<<"创建新线程 "<<socketDescriptor;
+    qDebug()<<"创建新线程 "<<QThread::currentThread();
 
     socket = new QTcpSocket();
     socket->setSocketDescriptor(socketDescriptor);
 
-    connect(socket, SIGNAL(readyRead()), SLOT(onReadyRead()));
-    connect(socket, SIGNAL(disconnected()), SLOT(onDisconnected()));
+    connect(socket, SIGNAL(readyRead()), this, SLOT(onReadyRead()), Qt::DirectConnection);
+    connect(socket, SIGNAL(disconnected()), this, SLOT(onDisconnected()), Qt::DirectConnection);
 
     //使线程进入自己的事件循环
     exec();

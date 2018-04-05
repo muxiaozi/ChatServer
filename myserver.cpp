@@ -1,4 +1,8 @@
-﻿#include "myserver.h"
+﻿#if _MSC_VER >= 1600
+#pragma execution_character_set("utf-8")
+#endif
+
+#include "myserver.h"
 #include "myclient.h"
 #include <QDebug>
 
@@ -14,28 +18,19 @@ QList<MyClient *> MyServer::getClientList() const
 
 void MyServer::onSendToOne(qintptr someone, const QByteArray &data)
 {
-    for(auto client : clientList){
-        if(client->getSocketDescriptor() == someone){
-            client->sendData(data);
-            break;
-        }
-    }
+    emit sendData(someone, data);
 }
 
 void MyServer::onSendExceptOne(qintptr someone, const QByteArray &data)
 {
+    qDebug()<<"sendData server "<<QThread::currentThread();
+
     for(auto client : clientList){
         if(client->getSocketDescriptor() != someone){
-            client->sendData(data);
+            emit sendData(client->getSocketDescriptor(), data);
             break;
         }
     }
-}
-
-void MyServer::clientConnected(qintptr user, const QString &name)
-{
-
-    emit onClientConnected(user, name);
 }
 
 void MyServer::onClientFinished()
@@ -57,14 +52,16 @@ void MyServer::forceDisconnect(qintptr client)
 
 void MyServer::incomingConnection(qintptr handle)
 {
-    MyClient *client = new MyClient(handle, this);
+    qDebug()<<"incoming Thread: "<<QThread::currentThread();
+    MyClient *client = new MyClient(handle);
+    clientList.append(client);
 
     //线程退出通知
     connect(client, SIGNAL(finished()), this, SLOT(onClientFinished()));
 
     //客户端连接
     connect(client, SIGNAL(onClientConnected(qintptr,QString)),
-            this, SLOT(clientConnected(qintptr,QString)));
+            this, SIGNAL(onClientConnected(qintptr,QString)));
 
     //客户端断开
     connect(client, SIGNAL(onClientDisconnected(qintptr)),
@@ -72,11 +69,17 @@ void MyServer::incomingConnection(qintptr handle)
 
     //有消息需要发送给某一个人
     connect(client, SIGNAL(sendToOne(qintptr,QByteArray)),
-            this, SLOT(onSendToOne(qintptr,QByteArray)), Qt::QueuedConnection);
+            this, SLOT(onSendToOne(qintptr,QByteArray)));
 
     //有消息需要发送给除了某一个人以外的所有人
     connect(client, SIGNAL(sendExceptOne(qintptr,QByteArray)),
             this, SLOT(onSendExceptOne(qintptr,QByteArray)), Qt::QueuedConnection);
 
+    //发送消息
+    connect(this, SIGNAL(sendData(qintptr,QByteArray)),
+            client, SLOT(sendData(qintptr,QByteArray)));
+
     client->start();
+
+    qDebug()<<"iii " << client->thread();
 }

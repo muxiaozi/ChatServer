@@ -1,4 +1,8 @@
-﻿#include "chatserver.h"
+﻿#if _MSC_VER >= 1600
+#pragma execution_character_set("utf-8")
+#endif
+
+#include "chatserver.h"
 #include "ui_chatserver.h"
 #include "myserver.h"
 
@@ -7,11 +11,13 @@
 #include <QDateTime>
 #include <QLabel>
 #include <QMessageBox>
+#include <QThread>
 
 ChatServer::ChatServer(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::ChatServer)
 {
+    qDebug()<<"main Thread: "<<QThread::currentThread();
     ui->setupUi(this);
 
     //设置表格 名称 登陆时间 操作

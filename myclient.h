@@ -13,12 +13,12 @@ class MyClient : public QThread
     Q_OBJECT
 public:
     enum DataType{
-        CLIENT_CONNECTED = 1,
-        CLIENT_DISCONNECTED = 2,
-        RECEIVE_TEXT_SINGAL = 3,
-        RECEIVE_TEXT_ALL = 4,
-        RECEIVE_VOICE_SINGAL = 5,
-        RECEIVE_VOICE_ALL = 6,
+        CONNECTED = 1,
+        DISCONNECTED = 2,
+        TEXT_TO_ONE = 3,
+        TEXT_TO_ALL = 4,
+        VOICE_TO_ONE = 5,
+        VOICE_TO_ALL = 6,
     };
 
 public:
@@ -26,7 +26,6 @@ public:
 
     qintptr getSocketDescriptor() const;
     QString getName() const;
-    void sendData(const QByteArray &data);
     void forceDisconnect();
     void sendOnlineUserToMe();
 
@@ -35,6 +34,9 @@ signals:
     void onClientDisconnected(qintptr user);
     void sendToOne(qintptr someone, const QByteArray &data);
     void sendExceptOne(qintptr someone, const QByteArray &data);
+
+public slots:
+    void sendData(qintptr user, const QByteArray &data);
 
 private slots:
     void onReadyRead();
@@ -48,9 +50,6 @@ private:
 
     //服务端识别码，用于创建客户端
     qintptr socketDescriptor;
-
-    //客户端识别码，用于识别唯一客户
-    qintptr clientDescriptor;
 
     QString name;
     QByteArray packetData;
