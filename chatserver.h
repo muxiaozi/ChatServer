@@ -4,7 +4,7 @@
 #include <QMainWindow>
 
 namespace Ui {
-    class ChatServer;
+class ChatServer;
 }
 
 class MyServer;
