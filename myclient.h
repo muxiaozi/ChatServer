@@ -6,6 +6,7 @@
 #include <QByteArray>
 
 class QTcpSocket;
+class MyServer;
 
 class MyClient : public QThread
 {
@@ -23,10 +24,11 @@ public:
 public:
     explicit MyClient(qintptr socketDescriptor, QObject *parent = Q_NULLPTR);
 
-    qintptr getSocketDescriptor();
-    QString getName();
+    qintptr getSocketDescriptor() const;
+    QString getName() const;
     void sendData(const QByteArray &data);
     void forceDisconnect();
+    void sendOnlineUserToMe();
 
 signals:
     void onClientConnected(qintptr user, const QString &name);
@@ -52,6 +54,8 @@ private:
 
     QString name;
     QByteArray packetData;
+
+    MyServer *server;
 
 };
 

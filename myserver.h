@@ -11,6 +11,7 @@ class MyServer : public QTcpServer
     Q_OBJECT
 public:
     explicit MyServer(QObject *parent = Q_NULLPTR);
+    QList<MyClient*> getClientList() const;
 
 signals:
     void onClientConnected(qintptr user, const QString &name);
@@ -19,6 +20,7 @@ signals:
 public slots:
     void onSendToOne(qintptr someone, const QByteArray &data);
     void onSendExceptOne(qintptr someone, const QByteArray &data);
+    void clientConnected(qintptr user, const QString &name);
     void onClientFinished();
     void forceDisconnect(qintptr client);
 

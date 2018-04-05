@@ -3,19 +3,21 @@
 #include <QDataStream>
 #include <QByteArray>
 #include <QDebug>
+#include "myserver.h" //为了获取客户端列表
 
 MyClient::MyClient(qintptr socketDescriptor, QObject *parent) :
     QThread(parent),
     socketDescriptor(socketDescriptor)
 {
+    server = (MyServer*)parent;
 }
 
-qintptr MyClient::getSocketDescriptor()
+qintptr MyClient::getSocketDescriptor() const
 {
     return clientDescriptor;
 }
 
-QString MyClient::getName()
+QString MyClient::getName() const
 {
     return name;
 }
@@ -30,6 +32,28 @@ void MyClient::sendData(const QByteArray &data)
 void MyClient::forceDisconnect()
 {
     socket->disconnectFromHost();
+}
+
+/**
+ * @brief 把在线列表发送给自己
+ */
+void MyClient::sendOnlineUserToMe()
+{
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+
+    QList<MyClient*> clients = server->getClientList();
+    for(MyClient* client : clients){
+        stream.device()->seek(0);
+        data.clear();
+        stream<<(int)0;
+        stream<<CLIENT_CONNECTED;
+        stream<<client->getSocketDescriptor();
+        stream<<client->getName().toUtf8();
+        stream.device()->seek(0);
+        stream<<data->size();
+        socket->write(data);
+    }
 }
 
 void MyClient::onReadyRead()
@@ -54,6 +78,9 @@ void MyClient::onReadyRead()
             stream>>info;
             clientDescriptor = sender;
             name = QString::fromUtf8(info);
+
+            sendOnlineUserToMe();
+
             emit onClientConnected(sender, name);
             emit sendExceptOne(sender, packetData.left(size));
             break;
@@ -63,9 +90,6 @@ void MyClient::onReadyRead()
         {
             qintptr receiver;
             stream>>receiver;
-            QByteArray byteText;
-            stream>>byteText;
-            qDebug()<<QString::fromUtf8(byteText);
             emit sendToOne(receiver, packetData.left(size));
             break;
         }
@@ -83,6 +107,10 @@ void MyClient::onReadyRead()
     }
 
     packetData = packetData.right(packetData.size() - size);
+
+    //如果还有数据可读，继续读取
+    if(packetData.size() > sizeof(int))
+        onReadyRead();
 }
 
 void MyClient::onDisconnected()

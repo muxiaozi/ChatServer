@@ -7,6 +7,11 @@ MyServer::MyServer(QObject *parent) :
 {
 }
 
+QList<MyClient *> MyServer::getClientList() const
+{
+    return clientList;
+}
+
 void MyServer::onSendToOne(qintptr someone, const QByteArray &data)
 {
     for(auto client : clientList){
@@ -25,6 +30,12 @@ void MyServer::onSendExceptOne(qintptr someone, const QByteArray &data)
             break;
         }
     }
+}
+
+void MyServer::clientConnected(qintptr user, const QString &name)
+{
+
+    emit onClientConnected(user, name);
 }
 
 void MyServer::onClientFinished()
@@ -53,7 +64,7 @@ void MyServer::incomingConnection(qintptr handle)
 
     //客户端连接
     connect(client, SIGNAL(onClientConnected(qintptr,QString)),
-            this, SIGNAL(onClientConnected(qintptr,QString)));
+            this, SLOT(clientConnected(qintptr,QString)));
 
     //客户端断开
     connect(client, SIGNAL(onClientDisconnected(qintptr)),
