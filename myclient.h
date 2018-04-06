@@ -4,6 +4,7 @@
 #include <QThread>
 #include <QString>
 #include <QByteArray>
+#include <QDebugStateSaver>
 
 class QTcpSocket;
 class MyServer;
@@ -59,5 +60,7 @@ private:
     MyServer *server;
 
 };
+
+
 
 #endif // MYCLIENT_H

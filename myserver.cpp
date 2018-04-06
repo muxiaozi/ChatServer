@@ -26,7 +26,6 @@ void MyServer::onSendExceptOne(qintptr someone, const QByteArray &data)
     for(auto client : clientList){
         if(client->getSocketDescriptor() != someone){
             emit sendData(client->getSocketDescriptor(), data);
-            break;
         }
     }
 }
@@ -55,6 +54,7 @@ void MyServer::incomingConnection(qintptr handle)
     client->moveToThread(client);
 
     clientList.append(client);
+    qDebug()<<"size: "<<clientList.length()<<", content: "<<clientList;
 
     //线程退出通知
     connect(client, SIGNAL(finished()), this, SLOT(onClientFinished()));

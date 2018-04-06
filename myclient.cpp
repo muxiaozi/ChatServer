@@ -44,7 +44,9 @@ void MyClient::sendOnlineUserToMe()
     QDataStream stream(&data, QIODevice::WriteOnly);
 
     QList<MyClient*> clients = server->getClientList();
-    for(auto client : clients){
+    for(MyClient* client : clients){
+        if(client->getSocketDescriptor() == getSocketDescriptor())
+            continue;
         stream.device()->seek(0);
         data.clear();
         stream<<(int)0;
@@ -158,3 +160,5 @@ void MyClient::run()
     //使线程进入自己的事件循环
     exec();
 }
+
+

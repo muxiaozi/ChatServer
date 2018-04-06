@@ -17,7 +17,6 @@ ChatServer::ChatServer(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::ChatServer)
 {
-    qDebug()<<"main Thread: "<<QThread::currentThread();
     ui->setupUi(this);
 
     //设置表格 名称 登陆时间 操作
