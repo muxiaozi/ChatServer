@@ -10,10 +10,9 @@
 #include "myserver.h" //为了获取客户端列表
 
 MyClient::MyClient(qintptr socketDescriptor, QObject *parent) :
-    QThread(parent),
-    socketDescriptor(socketDescriptor)
+    QThread(parent)
 {
-    server = (MyServer*)parent;
+    this->socketDescriptor = socketDescriptor;
 }
 
 qintptr MyClient::getSocketDescriptor() const
@@ -24,6 +23,11 @@ qintptr MyClient::getSocketDescriptor() const
 QString MyClient::getName() const
 {
     return name;
+}
+
+QTcpSocket *MyClient::getSocket() const
+{
+    return socket;
 }
 
 void MyClient::forceDisconnect()
@@ -39,24 +43,27 @@ void MyClient::sendOnlineUserToMe()
     QByteArray data;
     QDataStream stream(&data, QIODevice::WriteOnly);
 
-//    QList<MyClient*> clients = server->getClientList();
-//    for(MyClient* client : clients){
-//        stream.device()->seek(0);
-//        data.clear();
-//        stream<<(int)0;
-//        stream<<(int)CLIENT_CONNECTED;
-//        stream<<client->getSocketDescriptor();
-//        stream<<client->getName().toUtf8();
-//        stream.device()->seek(0);
-//        stream<<data.size();
-//        socket->write(data);
-    //    }
+    QList<MyClient*> clients = server->getClientList();
+    for(auto client : clients){
+        stream.device()->seek(0);
+        data.clear();
+        stream<<(int)0;
+        stream<<(int)CONNECTED;
+        stream<<client->getSocketDescriptor();
+        stream<<client->getName().toUtf8();
+        stream.device()->seek(0);
+        stream<<data.size();
+        socket->write(data);
+    }
+}
+
+void MyClient::setServer(MyServer *server)
+{
+    this->server = server;
 }
 
 void MyClient::sendData(qintptr user, const QByteArray &data)
 {
-    qDebug()<<"sendData client "<<QThread::currentThread();
-
     if(user == getSocketDescriptor()){
         socket->write(data);
     }
@@ -64,8 +71,6 @@ void MyClient::sendData(qintptr user, const QByteArray &data)
 
 void MyClient::onReadyRead()
 {
-    qDebug()<<"readyRead "<<QThread::currentThread();
-
     int size;           //大小
     int type;           //类型
     qintptr receiver;   //接收/发送方
@@ -119,6 +124,7 @@ void MyClient::onReadyRead()
 
         //截取未读数据块
         packetData = packetData.right(packetData.size() - size);
+        stream.device()->seek(0);
     }
 }
 
@@ -143,12 +149,11 @@ void MyClient::onDisconnected()
 void MyClient::run()
 {
     qDebug()<<"创建新线程 "<<QThread::currentThread();
-
     socket = new QTcpSocket();
     socket->setSocketDescriptor(socketDescriptor);
 
-    connect(socket, SIGNAL(readyRead()), this, SLOT(onReadyRead()), Qt::DirectConnection);
-    connect(socket, SIGNAL(disconnected()), this, SLOT(onDisconnected()), Qt::DirectConnection);
+    connect(socket, SIGNAL(readyRead()), this, SLOT(onReadyRead()));
+    connect(socket, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
 
     //使线程进入自己的事件循环
     exec();

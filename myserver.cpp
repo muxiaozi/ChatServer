@@ -23,8 +23,6 @@ void MyServer::onSendToOne(qintptr someone, const QByteArray &data)
 
 void MyServer::onSendExceptOne(qintptr someone, const QByteArray &data)
 {
-    qDebug()<<"sendData server "<<QThread::currentThread();
-
     for(auto client : clientList){
         if(client->getSocketDescriptor() != someone){
             emit sendData(client->getSocketDescriptor(), data);
@@ -52,8 +50,10 @@ void MyServer::forceDisconnect(qintptr client)
 
 void MyServer::incomingConnection(qintptr handle)
 {
-    qDebug()<<"incoming Thread: "<<QThread::currentThread();
     MyClient *client = new MyClient(handle);
+    client->setServer(this);
+    client->moveToThread(client);
+
     clientList.append(client);
 
     //线程退出通知
@@ -73,13 +73,11 @@ void MyServer::incomingConnection(qintptr handle)
 
     //有消息需要发送给除了某一个人以外的所有人
     connect(client, SIGNAL(sendExceptOne(qintptr,QByteArray)),
-            this, SLOT(onSendExceptOne(qintptr,QByteArray)), Qt::QueuedConnection);
+            this, SLOT(onSendExceptOne(qintptr,QByteArray)));
 
     //发送消息
     connect(this, SIGNAL(sendData(qintptr,QByteArray)),
             client, SLOT(sendData(qintptr,QByteArray)));
 
     client->start();
-
-    qDebug()<<"iii " << client->thread();
 }

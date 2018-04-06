@@ -26,8 +26,10 @@ public:
 
     qintptr getSocketDescriptor() const;
     QString getName() const;
+    QTcpSocket *getSocket() const;
     void forceDisconnect();
     void sendOnlineUserToMe();
+    void setServer(MyServer *server);
 
 signals:
     void onClientConnected(qintptr user, const QString &name);
