@@ -11,18 +11,19 @@ class MyServer : public QTcpServer
     Q_OBJECT
 public:
     explicit MyServer(QObject *parent = Q_NULLPTR);
-    QList<MyClient*> getClientList() const;
 
 signals:
-    void onClientConnected(qintptr user, const QString &name);
-    void onClientDisconnected(qintptr user);
+    void clientConnected(qintptr user, const QString &name);
+    void clientDisconnected(qintptr user);
     void sendData(qintptr user, const QByteArray &data);
+    void forceDisconnect(qintptr user);
 
 public slots:
-    void onSendToOne(qintptr someone, const QByteArray &data);
-    void onSendExceptOne(qintptr someone, const QByteArray &data);
-    void onClientFinished();
-    void forceDisconnect(qintptr client);
+    void sendToOne(qintptr someone, const QByteArray &data);
+    void sendExceptOne(qintptr someone, const QByteArray &data);
+    void onClientConnected(qintptr user, const QString &name);
+    void onClientDisconnected();
+    void onForceDisconnect(qintptr client);
 
 protected:
     void incomingConnection(qintptr handle) Q_DECL_OVERRIDE;

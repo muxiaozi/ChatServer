@@ -33,9 +33,9 @@ ChatServer::ChatServer(QWidget *parent) :
     //初始化服务器
     server = new MyServer(this);
     server->listen(QHostAddress::AnyIPv4, 10086);
-    connect(server, SIGNAL(onClientConnected(qintptr,QString)),
+    connect(server, SIGNAL(clientConnected(qintptr,QString)),
             this, SLOT(onClientConnected(qintptr,QString)));
-    connect(server, SIGNAL(onClientDisconnected(qintptr)),
+    connect(server, SIGNAL(clientDisconnected(qintptr)),
             this, SLOT(onClientDisconnected(qintptr)));
 
     setWindowTitle(windowTitle() + QString(" - 端口: %1").arg(server->serverPort()));

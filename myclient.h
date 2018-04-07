@@ -4,10 +4,8 @@
 #include <QThread>
 #include <QString>
 #include <QByteArray>
-#include <QDebugStateSaver>
 
 class QTcpSocket;
-class MyServer;
 
 class MyClient : public QThread
 {
@@ -24,22 +22,19 @@ public:
 
 public:
     explicit MyClient(qintptr socketDescriptor, QObject *parent = Q_NULLPTR);
-
+    ~MyClient();
+    void sendOnlineUserToMe(qintptr user);
     qintptr getSocketDescriptor() const;
     QString getName() const;
-    QTcpSocket *getSocket() const;
-    void forceDisconnect();
-    void sendOnlineUserToMe();
-    void setServer(MyServer *server);
 
 signals:
-    void onClientConnected(qintptr user, const QString &name);
-    void onClientDisconnected(qintptr user);
-    void sendToOne(qintptr someone, const QByteArray &data);
-    void sendExceptOne(qintptr someone, const QByteArray &data);
+    void clientConnected(qintptr user, const QString& name);
+    void sendToOne(qintptr user, const QByteArray &data);
+    void sendExceptOne(qintptr user, const QByteArray &data);
 
 public slots:
-    void sendData(qintptr user, const QByteArray &data);
+    void onSendData(qintptr user, const QByteArray &data);
+    void onForceDisconnect(qintptr user);
 
 private slots:
     void onReadyRead();
@@ -49,15 +44,10 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 private:
-    QTcpSocket *socket;
-
-    //服务端识别码，用于创建客户端
-    qintptr socketDescriptor;
-
-    QString name;
-    QByteArray packetData;
-
-    MyServer *server;
+    QTcpSocket *socket;         //socket对象
+    qintptr socketDescriptor;   //连接描述符
+    QByteArray cacheData;       //数据缓存
+    QString name;               //客户端昵称
 
 };
 

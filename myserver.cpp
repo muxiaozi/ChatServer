@@ -11,17 +11,12 @@ MyServer::MyServer(QObject *parent) :
 {
 }
 
-QList<MyClient *> MyServer::getClientList() const
-{
-    return clientList;
-}
-
-void MyServer::onSendToOne(qintptr someone, const QByteArray &data)
+void MyServer::sendToOne(qintptr someone, const QByteArray &data)
 {
     emit sendData(someone, data);
 }
 
-void MyServer::onSendExceptOne(qintptr someone, const QByteArray &data)
+void MyServer::sendExceptOne(qintptr someone, const QByteArray &data)
 {
     for(auto client : clientList){
         if(client->getSocketDescriptor() != someone){
@@ -30,54 +25,75 @@ void MyServer::onSendExceptOne(qintptr someone, const QByteArray &data)
     }
 }
 
-void MyServer::onClientFinished()
+void MyServer::onClientConnected(qintptr user, const QString &name)
 {
-    MyClient *finishedClient = (MyClient*) sender();
-    clientList.removeOne(finishedClient);
-    finishedClient->deleteLater();
-}
+    //通知界面
+    emit clientConnected(user, name);
 
-void MyServer::forceDisconnect(qintptr client)
-{
-    for(auto c : clientList){
-        if(c->getSocketDescriptor() == client){
-            c->forceDisconnect();
-            break;
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+
+    for(MyClient* client : clientList){
+        if(client->getSocketDescriptor() != user){
+            stream.device()->seek(0);
+            data.clear();
+            stream<<(int)0;
+            stream<<(int)MyClient::CONNECTED;
+            stream<<client->getSocketDescriptor();
+            stream<<client->getName().toUtf8();
+            stream.device()->seek(0);
+            stream<<data.size();
+
+            emit sendToOne(user, data);
         }
     }
+}
+
+void MyServer::onClientDisconnected()
+{
+    MyClient *client = (MyClient*) sender();
+
+    //通知界面
+    emit clientDisconnected(client->getSocketDescriptor());
+
+    clientList.removeOne(client);
+
+    delete client;
+}
+
+void MyServer::onForceDisconnect(qintptr client)
+{
+    emit forceDisconnect(client);
 }
 
 void MyServer::incomingConnection(qintptr handle)
 {
     MyClient *client = new MyClient(handle);
-    client->setServer(this);
     client->moveToThread(client);
-
     clientList.append(client);
-    qDebug()<<"size: "<<clientList.length()<<", content: "<<clientList;
 
-    //线程退出通知
-    connect(client, SIGNAL(finished()), this, SLOT(onClientFinished()));
+    //客户端退出
+    connect(client, SIGNAL(finished()), this, SLOT(onClientDisconnected()));
 
-    //客户端连接
-    connect(client, SIGNAL(onClientConnected(qintptr,QString)),
-            this, SIGNAL(onClientConnected(qintptr,QString)));
-
-    //客户端断开
-    connect(client, SIGNAL(onClientDisconnected(qintptr)),
-            this, SIGNAL(onClientDisconnected(qintptr)));
-
-    //有消息需要发送给某一个人
+    //发送消息给一个人
     connect(client, SIGNAL(sendToOne(qintptr,QByteArray)),
-            this, SLOT(onSendToOne(qintptr,QByteArray)));
+            this, SLOT(sendToOne(qintptr,QByteArray)));
 
-    //有消息需要发送给除了某一个人以外的所有人
+    //发送消息给其他人
     connect(client, SIGNAL(sendExceptOne(qintptr,QByteArray)),
-            this, SLOT(onSendExceptOne(qintptr,QByteArray)));
+            this, SLOT(sendExceptOne(qintptr,QByteArray)));
+
+    //新客户端连接
+    connect(client, SIGNAL(clientConnected(qintptr,QString)),
+            this, SLOT(onClientConnected(qintptr,QString)));
 
     //发送消息
     connect(this, SIGNAL(sendData(qintptr,QByteArray)),
-            client, SLOT(sendData(qintptr,QByteArray)));
+            client, SLOT(onSendData(qintptr,QByteArray)));
 
-    client->start();
+    //强制退出
+    connect(this, SIGNAL(forceDisconnect(qintptr)),
+            client, SLOT(onForceDisconnect(qintptr)));
+
+    client->start();   
 }
